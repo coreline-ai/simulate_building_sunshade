@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   description: "시간, 계절, 방위각, 건물 배치에 따른 일조 상태를 3D로 시각화하는 시뮬레이터",
   keywords: ["일조", "태양", "시뮬레이터", "건물 배치", "Three.js", "Next.js"],
   authors: [{ name: "simulate_building_sunshade" }],
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+  },
   openGraph: {
     title: "건물 일조 시뮬레이터",
     description: "3D 기반 건물 일조 시뮬레이션",
