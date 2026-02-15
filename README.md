@@ -8,6 +8,10 @@
 ![Three.js](https://img.shields.io/badge/Three.js-000000?style=for-the-badge&logo=three.js&logoColor=white)
 ![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS_4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 
+<p align="center">
+  <img width="1515" height="875" alt="스크린샷 2026-02-15 오후 6 19 51" src="https://github.com/user-attachments/assets/88e75d4b-b2d8-408d-a0f4-201f443c596a" />
+</p>
+
 **건물 배치, 시간, 계절, 방위각 변화에 따른 일조/그림자 상태를 3D로 시각화하는 웹 시뮬레이터**
 
 </div>
