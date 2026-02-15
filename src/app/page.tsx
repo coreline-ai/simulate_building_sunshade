@@ -184,6 +184,8 @@ export default function SunSimulation() {
   // 3D 장면 초기화
   useEffect(() => {
     if (!containerRef.current) return;
+    const containerElement = containerRef.current;
+    const buildingMeshes = buildingMeshesRef.current;
 
     const scene = new THREE.Scene();
     sceneRef.current = scene;
@@ -202,7 +204,7 @@ export default function SunSimulation() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    containerRef.current.appendChild(renderer.domElement);
+    containerElement.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
     // 하늘
@@ -304,10 +306,10 @@ export default function SunSimulation() {
     scene.add(path2);
 
     // 초기 건물 배치
-    buildings.forEach(building => {
+    INITIAL_BUILDINGS.forEach(building => {
       const buildingMesh = createBuilding(building);
       scene.add(buildingMesh);
-      buildingMeshesRef.current.set(building.id, buildingMesh);
+      buildingMeshes.set(building.id, buildingMesh);
     });
 
     // 나무 배치
@@ -392,11 +394,11 @@ export default function SunSimulation() {
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
       window.removeEventListener('resize', handleResize);
-      if (containerRef.current?.contains(renderer.domElement)) {
-        containerRef.current.removeChild(renderer.domElement);
+      if (containerElement.contains(renderer.domElement)) {
+        containerElement.removeChild(renderer.domElement);
       }
       disposeScene(scene);
-      buildingMeshesRef.current.clear();
+      buildingMeshes.clear();
       sceneRef.current = null;
       cameraRef.current = null;
       sunRef.current = null;
@@ -407,7 +409,7 @@ export default function SunSimulation() {
       renderer.forceContextLoss();
       rendererRef.current = null;
     };
-  }, []);
+  }, [createBuilding]);
 
   // 건물 위치 변경 시 메시 업데이트
   useEffect(() => {

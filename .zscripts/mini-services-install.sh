@@ -1,36 +1,37 @@
 #!/bin/bash
 
-# 配置项
-ROOT_DIR="/home/z/my-project/mini-services"
+# 설정값
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="${ROOT_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)/mini-services}"
 
 main() {
-    echo "🚀 开始批量安装依赖..."
-    
-    # 检查 rootdir 是否存在
+    echo "🚀 의존성 일괄 설치를 시작합니다..."
+
+    # rootdir 존재 여부 확인
     if [ ! -d "$ROOT_DIR" ]; then
-        echo "ℹ️  目录 $ROOT_DIR 不存在，跳过安装"
+        echo "ℹ️  디렉터리 $ROOT_DIR 가 없어 설치를 건너뜁니다"
         return
     fi
-    
-    # 统计变量
+
+    # 통계 변수
     success_count=0
     fail_count=0
     failed_projects=""
-    
-    # 遍历 mini-services 目录下的所有文件夹
+
+    # mini-services 디렉터리 하위 폴더 순회
     for dir in "$ROOT_DIR"/*; do
-        # 检查是否是目录且包含 package.json
+        # 디렉터리이며 package.json 포함 여부 확인
         if [ -d "$dir" ] && [ -f "$dir/package.json" ]; then
             project_name=$(basename "$dir")
             echo ""
-            echo "📦 正在安装依赖: $project_name..."
-            
-            # 进入项目目录并执行 bun install
+            echo "📦 의존성 설치 중: $project_name..."
+
+            # 프로젝트 디렉터리로 이동 후 bun install 실행
             if (cd "$dir" && bun install); then
-                echo "✅ $project_name 依赖安装成功"
+                echo "✅ $project_name 의존성 설치 성공"
                 success_count=$((success_count + 1))
             else
-                echo "❌ $project_name 依赖安装失败"
+                echo "❌ $project_name 의존성 설치 실패"
                 fail_count=$((fail_count + 1))
                 if [ -z "$failed_projects" ]; then
                     failed_projects="$project_name"
@@ -40,26 +41,25 @@ main() {
             fi
         fi
     done
-    
-    # 汇总结果
+
+    # 결과 요약
     echo ""
     echo "=================================================="
     if [ $success_count -gt 0 ] || [ $fail_count -gt 0 ]; then
-        echo "🎉 安装完成！"
-        echo "✅ 成功: $success_count 个"
+        echo "🎉 설치 완료!"
+        echo "✅ 성공: $success_count개"
         if [ $fail_count -gt 0 ]; then
-            echo "❌ 失败: $fail_count 个"
+            echo "❌ 실패: $fail_count개"
             echo ""
-            echo "失败的项目:"
+            echo "실패한 프로젝트:"
             for project in $failed_projects; do
                 echo "  - $project"
             done
         fi
     else
-        echo "ℹ️  未找到任何包含 package.json 的项目"
+        echo "ℹ️  package.json 을 포함한 프로젝트를 찾지 못했습니다"
     fi
     echo "=================================================="
 }
 
 main
-

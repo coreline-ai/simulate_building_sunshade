@@ -49,6 +49,5 @@ test
 prompt
 
 server.log
-package-lock.json
 # Skills directory
 /skills/

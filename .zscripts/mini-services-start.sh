@@ -1,56 +1,56 @@
 #!/bin/sh
 
-# 配置项
+# 설정값
 DIST_DIR="./mini-services-dist"
 
-# 存储所有子进程的 PID
+# 모든 자식 프로세스 PID 저장
 pids=""
 
-# 清理函数：优雅关闭所有服务
+# 정리 함수: 모든 서비스를 정상 종료
 cleanup() {
     echo ""
-    echo "🛑 正在关闭所有服务..."
-    
-    # 发送 SIGTERM 信号给所有子进程
+    echo "🛑 모든 서비스를 종료하는 중..."
+
+    # 모든 자식 프로세스에 SIGTERM 전송
     for pid in $pids; do
         if kill -0 "$pid" 2>/dev/null; then
             service_name=$(ps -p "$pid" -o comm= 2>/dev/null || echo "unknown")
-            echo "   关闭进程 $pid ($service_name)..."
+            echo "   프로세스 종료 $pid ($service_name)..."
             kill -TERM "$pid" 2>/dev/null
         fi
     done
-    
-    # 等待所有进程退出（最多等待 5 秒）
+
+    # 모든 프로세스 종료 대기 (최대 5초)
     sleep 1
     for pid in $pids; do
         if kill -0 "$pid" 2>/dev/null; then
-            # 如果还在运行，等待最多 4 秒
+            # 아직 실행 중이면 최대 4초 추가 대기
             timeout=4
             while [ $timeout -gt 0 ] && kill -0 "$pid" 2>/dev/null; do
                 sleep 1
                 timeout=$((timeout - 1))
             done
-            # 如果仍然在运行，强制关闭
+            # 여전히 실행 중이면 강제 종료
             if kill -0 "$pid" 2>/dev/null; then
-                echo "   强制关闭进程 $pid..."
+                echo "   프로세스 강제 종료 $pid..."
                 kill -KILL "$pid" 2>/dev/null
             fi
         fi
     done
-    
-    echo "✅ 所有服务已关闭"
+
+    echo "✅ 모든 서비스가 종료되었습니다"
 }
 
 main() {
-    echo "🚀 开始启动所有 mini services..."
-    
-    # 检查 dist 目录是否存在
+    echo "🚀 모든 mini services 시작..."
+
+    # dist 디렉터리 존재 여부 확인
     if [ ! -d "$DIST_DIR" ]; then
-        echo "ℹ️  目录 $DIST_DIR 不存在"
+        echo "ℹ️  디렉터리 $DIST_DIR 가 없습니다"
         return
     fi
-    
-    # 查找所有 mini-service-*.js 文件
+
+    # mini-service-*.js 파일 검색
     service_files=""
     for file in "$DIST_DIR"/mini-service-*.js; do
         if [ -f "$file" ]; then
@@ -61,27 +61,27 @@ main() {
             fi
         fi
     done
-    
-    # 计算服务文件数量
+
+    # 서비스 파일 개수 계산
     service_count=0
     for file in $service_files; do
         service_count=$((service_count + 1))
     done
-    
+
     if [ $service_count -eq 0 ]; then
-        echo "ℹ️  未找到任何 mini service 文件"
+        echo "ℹ️  mini service 파일을 찾지 못했습니다"
         return
     fi
-    
-    echo "📦 找到 $service_count 个服务，开始启动..."
+
+    echo "📦 $service_count개 서비스를 찾았습니다. 시작합니다..."
     echo ""
-    
-    # 启动每个服务
+
+    # 각 서비스 시작
     for file in $service_files; do
         service_name=$(basename "$file" .js | sed 's/mini-service-//')
-        echo "▶️  启动服务: $service_name..."
-        
-        # 使用 bun 运行服务（后台运行）
+        echo "▶️  서비스 시작: $service_name..."
+
+        # bun으로 서비스 실행(백그라운드)
         bun "$file" &
         pid=$!
         if [ -z "$pids" ]; then
@@ -89,35 +89,34 @@ main() {
         else
             pids="$pids $pid"
         fi
-        
-        # 等待一小段时间检查进程是否成功启动
+
+        # 잠시 대기 후 실행 여부 확인
         sleep 0.5
         if ! kill -0 "$pid" 2>/dev/null; then
-            echo "❌ $service_name 启动失败"
-            # 从字符串中移除失败的 PID
+            echo "❌ $service_name 시작 실패"
+            # 실패한 PID를 문자열에서 제거
             pids=$(echo "$pids" | sed "s/\b$pid\b//" | sed 's/  */ /g' | sed 's/^ *//' | sed 's/ *$//')
         else
-            echo "✅ $service_name 已启动 (PID: $pid)"
+            echo "✅ $service_name 시작됨 (PID: $pid)"
         fi
     done
-    
-    # 计算运行中的服务数量
+
+    # 실행 중인 서비스 개수 계산
     running_count=0
     for pid in $pids; do
         if kill -0 "$pid" 2>/dev/null; then
             running_count=$((running_count + 1))
         fi
     done
-    
+
     echo ""
-    echo "🎉 所有服务已启动！共 $running_count 个服务正在运行"
+    echo "🎉 모든 서비스가 시작되었습니다! 현재 실행 중: $running_count개"
     echo ""
-    echo "💡 按 Ctrl+C 停止所有服务"
+    echo "💡 Ctrl+C 로 모든 서비스를 중지할 수 있습니다"
     echo ""
-    
-    # 等待所有后台进程
+
+    # 모든 백그라운드 프로세스 대기
     wait
 }
 
 main
-

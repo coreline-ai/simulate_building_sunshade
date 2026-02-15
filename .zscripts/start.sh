@@ -2,125 +2,118 @@
 
 set -e
 
-# 获取脚本所在目录
+# 스크립트가 위치한 디렉터리 경로
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUILD_DIR="$SCRIPT_DIR"
 
-# 存储所有子进程的 PID
+# 모든 자식 프로세스 PID 저장
 pids=""
 
-# 清理函数：优雅关闭所有服务
+# 정리 함수: 모든 서비스를 정상 종료
 cleanup() {
     echo ""
-    echo "🛑 正在关闭所有服务..."
-    
-    # 发送 SIGTERM 信号给所有子进程
+    echo "🛑 모든 서비스를 종료하는 중..."
+
+    # 모든 자식 프로세스에 SIGTERM 전송
     for pid in $pids; do
         if kill -0 "$pid" 2>/dev/null; then
             service_name=$(ps -p "$pid" -o comm= 2>/dev/null || echo "unknown")
-            echo "   关闭进程 $pid ($service_name)..."
+            echo "   프로세스 종료 $pid ($service_name)..."
             kill -TERM "$pid" 2>/dev/null
         fi
     done
-    
-    # 等待所有进程退出（最多等待 5 秒）
+
+    # 모든 프로세스 종료 대기 (최대 5초)
     sleep 1
     for pid in $pids; do
         if kill -0 "$pid" 2>/dev/null; then
-            # 如果还在运行，等待最多 4 秒
+            # 아직 실행 중이면 최대 4초 추가 대기
             timeout=4
             while [ $timeout -gt 0 ] && kill -0 "$pid" 2>/dev/null; do
                 sleep 1
                 timeout=$((timeout - 1))
             done
-            # 如果仍然在运行，强制关闭
+            # 여전히 실행 중이면 강제 종료
             if kill -0 "$pid" 2>/dev/null; then
-                echo "   强制关闭进程 $pid..."
+                echo "   프로세스 강제 종료 $pid..."
                 kill -KILL "$pid" 2>/dev/null
             fi
         fi
     done
-    
-    echo "✅ 所有服务已关闭"
+
+    echo "✅ 모든 서비스가 종료되었습니다"
     exit 0
 }
 
-echo "🚀 开始启动所有服务..."
+echo "🚀 모든 서비스 시작..."
 echo ""
 
-# 切换到构建目录
+# 빌드 디렉터리로 이동
 cd "$BUILD_DIR" || exit 1
 
 ls -lah
 
-# 初始化数据库（如果存在）
-if [ -d "./next-service-dist/db" ] && [ "$(ls -A ./next-service-dist/db 2>/dev/null)" ] && [ -d "/db" ]; then
-    echo "🗄️  初始化数据库从 ./next-service-dist/db 到 /db..."
-    cp -r ./next-service-dist/db/* /db/ 2>/dev/null || echo "  ⚠️  无法复制到 /db，跳过数据库初始化"
-    echo "✅ 数据库初始化完成"
-fi
-
-# 启动 Next.js 服务器
+# Next.js 서버 시작
 if [ -f "./next-service-dist/server.js" ]; then
-    echo "🚀 启动 Next.js 服务器..."
+    echo "🚀 Next.js 서버 시작..."
     cd next-service-dist/ || exit 1
-    
-    # 设置环境变量
+
+    # 환경 변수 설정
     export NODE_ENV=production
     export PORT=${PORT:-3000}
     export HOSTNAME=${HOSTNAME:-0.0.0.0}
-    
-    # 后台启动 Next.js
-    bun server.js &
+
+    # Next.js 백그라운드 실행
+    node server.js &
     NEXT_PID=$!
     pids="$NEXT_PID"
-    
-    # 等待一小段时间检查进程是否成功启动
+
+    # 잠시 대기 후 실행 여부 확인
     sleep 1
     if ! kill -0 "$NEXT_PID" 2>/dev/null; then
-        echo "❌ Next.js 服务器启动失败"
+        echo "❌ Next.js 서버 시작 실패"
         exit 1
     else
-        echo "✅ Next.js 服务器已启动 (PID: $NEXT_PID, Port: $PORT)"
+        echo "✅ Next.js 서버 시작됨 (PID: $NEXT_PID, Port: $PORT)"
     fi
-    
+
     cd ../
 else
-    echo "⚠️  未找到 Next.js 服务器文件: ./next-service-dist/server.js"
+    echo "⚠️  Next.js 서버 파일을 찾지 못했습니다: ./next-service-dist/server.js"
 fi
 
-# 启动 mini-services
+# mini-services 시작
 if [ -f "./mini-services-start.sh" ]; then
-    echo "🚀 启动 mini-services..."
-    
-    # 运行启动脚本（从根目录运行，脚本内部会处理 mini-services-dist 目录）
+    echo "🚀 mini-services 시작..."
+
+    # 루트 경로에서 시작 스크립트 실행 (스크립트 내부에서 mini-services-dist 처리)
     sh ./mini-services-start.sh &
     MINI_PID=$!
     pids="$pids $MINI_PID"
-    
-    # 等待一小段时间检查进程是否成功启动
+
+    # 잠시 대기 후 실행 여부 확인
     sleep 1
     if ! kill -0 "$MINI_PID" 2>/dev/null; then
-        echo "⚠️  mini-services 可能启动失败，但继续运行..."
+        echo "⚠️  mini-services 시작에 실패했을 수 있으나 계속 진행합니다..."
     else
-        echo "✅ mini-services 已启动 (PID: $MINI_PID)"
+        echo "✅ mini-services 시작됨 (PID: $MINI_PID)"
     fi
 elif [ -d "./mini-services-dist" ]; then
-    echo "⚠️  未找到 mini-services 启动脚本，但目录存在"
+    echo "⚠️  mini-services 시작 스크립트가 없지만 디렉터리는 존재합니다"
 else
-    echo "ℹ️  mini-services 目录不存在，跳过"
+    echo "ℹ️  mini-services 디렉터리가 없어 건너뜁니다"
 fi
 
-# 启动 Caddy（如果存在 Caddyfile）
-echo "🚀 启动 Caddy..."
+# Caddy 시작 (Caddyfile이 있는 경우)
+echo "🚀 Caddy 시작..."
 
-# Caddy 作为前台进程运行（主进程）
-echo "✅ Caddy 已启动（前台运行）"
+# Caddy를 포그라운드(메인 프로세스)로 실행
+echo "✅ Caddy 시작됨 (포그라운드 실행)"
 echo ""
-echo "🎉 所有服务已启动！"
+echo "🎉 모든 서비스가 시작되었습니다!"
 echo ""
-echo "💡 按 Ctrl+C 停止所有服务"
+echo "💡 Ctrl+C 로 모든 서비스를 중지할 수 있습니다"
 echo ""
 
-# Caddy 作为主进程运行
+# Caddy를 메인 프로세스로 실행
 exec caddy run --config Caddyfile --adapter caddyfile
